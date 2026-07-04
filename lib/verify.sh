@@ -14,10 +14,11 @@ hi_verify_item() {
 }
 
 hi_verify_swap_active() { swapon --show=NAME --noheadings | grep -Fx -- "$HI_SWAP_PATH" >/dev/null 2>&1; }
-hi_verify_resume_conf() { grep -Fx -- "RESUME=UUID=$HI_RESUME_UUID resume_offset=$HI_RESUME_OFFSET" /etc/initramfs-tools/conf.d/resume >/dev/null 2>&1; }
+hi_verify_resume_conf() { grep -Fx -- "RESUME=UUID=$HI_RESUME_UUID" /etc/initramfs-tools/conf.d/resume >/dev/null 2>&1 && grep -Fx -- "resume_offset=$HI_RESUME_OFFSET" /etc/initramfs-tools/conf.d/resume >/dev/null 2>&1; }
 hi_verify_grub_defaults() { grep -q "resume=UUID=$HI_RESUME_UUID" /etc/default/grub && grep -q "resume_offset=$HI_RESUME_OFFSET" /etc/default/grub; }
 hi_verify_fstab() { awk -v path="$HI_SWAP_PATH" '$1==path && $3=="swap" {found=1} END{exit found?0:1}' /etc/fstab; }
 hi_verify_offset() { [ -n "$HI_RESUME_OFFSET" ]; }
+hi_verify_resume_sysfs() { [ -x /usr/local/lib/hibernate-installer/set-resume.sh ] && systemctl is-enabled hibernate-installer-resume.service >/dev/null 2>&1; }
 
 hi_run_verification() {
   hi_info "Running verification checks"
@@ -31,6 +32,7 @@ hi_run_verification() {
   hi_verify_item "Resume offset detected" hi_verify_offset
   hi_verify_item "GRUB resume parameters" hi_verify_grub_defaults
   hi_verify_item "initramfs resume config" hi_verify_resume_conf
+  hi_verify_item "resume sysfs service" hi_verify_resume_sysfs
   [ "$HI_VERIFY_FAILED" -eq 0 ] || hi_die "One or more verification checks failed"
   hi_success "All verification checks passed"
 }

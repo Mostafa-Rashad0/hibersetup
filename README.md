@@ -51,9 +51,10 @@ The installer runs these steps in order:
 8. Detects resume UUID and resume offset automatically.
 9. Preserves existing GRUB kernel parameters while replacing old resume parameters.
 10. Writes `/etc/initramfs-tools/conf.d/resume`.
-11. Runs `update-grub` and `update-initramfs -u`.
-12. Verifies swap, fstab, GRUB, resume offset, and initramfs resume configuration.
-13. Offers a reboot.
+11. Installs a small systemd oneshot service that populates `/sys/power/resume` and `/sys/power/resume_offset` at boot for systems where systemd does not populate them from the kernel command line.
+12. Runs `update-grub` and `update-initramfs -u`.
+13. Verifies swap, fstab, GRUB, resume offset, initramfs resume configuration, and the resume sysfs service.
+14. Offers a reboot.
 
 ## Swap size policy
 
@@ -82,7 +83,8 @@ Logs are written to:
 
 - If the installer reports an unsupported filesystem, do not force it. Resume offsets are filesystem-specific.
 - If `filefrag` reports multiple extents, the installer retries swapfile creation up to three times. By default it then continues with a warning because Ubuntu/Linux can resume from a swapfile using the first physical offset; set `HI_STRICT_EXTENTS=1` to abort instead.
-- If hibernation fails after installation, reboot once and check `/proc/cmdline`, `/etc/initramfs-tools/conf.d/resume`, and `/var/log/hibernate-installer.log`.
+- If `systemctl hibernate` reports `Invalid resume config: resume= is not populated yet resume_offset= is`, rerun the latest installer. It installs `hibernate-installer-resume.service`, which writes the resume device and offset into `/sys/power/resume*` at boot.
+- If hibernation fails after installation, reboot once and check `/proc/cmdline`, `/etc/initramfs-tools/conf.d/resume`, `systemctl status hibernate-installer-resume.service`, and `/var/log/hibernate-installer.log`.
 
 ## FAQ
 

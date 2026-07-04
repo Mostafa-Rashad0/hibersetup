@@ -42,6 +42,7 @@ main() {
   hi_detect_resume
   hi_configure_grub
   hi_configure_initramfs_resume
+  hi_configure_resume_sysfs_service
   hi_configure_gnome
   hi_configure_polkit
   hi_update_grub

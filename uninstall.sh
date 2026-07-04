@@ -63,7 +63,9 @@ remove_generated_files() {
   for path in \
     /etc/initramfs-tools/conf.d/resume \
     /etc/systemd/sleep.conf.d/hibernate-installer.conf \
-    /etc/polkit-1/rules.d/49-hibernate-installer.rules
+    /etc/polkit-1/rules.d/49-hibernate-installer.rules \
+    /etc/systemd/system/hibernate-installer-resume.service \
+    /usr/local/lib/hibernate-installer/set-resume.sh
   do
     if [ -e "$path" ]; then
       if [ "$HI_DRY_RUN" -eq 1 ]; then
@@ -84,7 +86,12 @@ main() {
   if ! restore_from_latest_backup; then
     remove_resume_params_from_grub
   fi
+  if hi_command_exists systemctl; then
+    hi_run systemctl disable --now hibernate-installer-resume.service || true
+    hi_run systemctl daemon-reload || true
+  fi
   remove_generated_files
+  if hi_command_exists systemctl; then hi_run systemctl daemon-reload || true; fi
   if hi_command_exists update-grub; then hi_run update-grub; fi
   if hi_command_exists update-initramfs; then hi_run update-initramfs -u; fi
   hi_success "Hibernate Installer managed configuration removed"
