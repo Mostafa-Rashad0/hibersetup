@@ -34,6 +34,7 @@ sudo ./install.sh --dry-run
 sudo ./install.sh --verbose
 sudo ./install.sh --debug
 sudo ./install.sh --yes
+HI_STRICT_EXTENTS=1 sudo ./install.sh
 ```
 
 ## How it works
@@ -80,7 +81,7 @@ Logs are written to:
 ## Troubleshooting
 
 - If the installer reports an unsupported filesystem, do not force it. Resume offsets are filesystem-specific.
-- If `filefrag` reports multiple extents, the installer automatically retries swapfile creation up to three times before aborting safely.
+- If `filefrag` reports multiple extents, the installer retries swapfile creation up to three times. By default it then continues with a warning because Ubuntu/Linux can resume from a swapfile using the first physical offset; set `HI_STRICT_EXTENTS=1` to abort instead.
 - If hibernation fails after installation, reboot once and check `/proc/cmdline`, `/etc/initramfs-tools/conf.d/resume`, and `/var/log/hibernate-installer.log`.
 
 ## FAQ

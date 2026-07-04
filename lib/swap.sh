@@ -6,6 +6,7 @@ HI_SWAP_SIZE_MIB=0
 HI_ACTIVE_SWAP_PATH=
 HI_ACTIVE_SWAP_TYPE=
 HI_ACTIVE_SWAP_SIZE_KB=0
+HI_STRICT_EXTENTS=${HI_STRICT_EXTENTS:-0}
 
 hi_detect_memory_and_swap() {
   hi_info "Detecting RAM and swap"
@@ -72,7 +73,11 @@ hi_create_validated_swap_candidate() {
       break
     fi
     if [ "$attempt" -ge 3 ]; then
-      hi_die "Swapfile remained fragmented after 3 attempts. Free disk space or defragment the ext4 filesystem, then retry."
+      if [ "$HI_STRICT_EXTENTS" -eq 1 ]; then
+        hi_die "Swapfile remained fragmented after 3 attempts. Free disk space or defragment the ext4 filesystem, then retry."
+      fi
+      hi_warning "Swapfile is fragmented after 3 attempts; continuing because modern Linux can use the first physical offset for swapfile resume. Set HI_STRICT_EXTENTS=1 to abort instead."
+      break
     fi
     attempt=$((attempt + 1))
     hi_warning "Recreating swapfile because extent validation failed (attempt $attempt of 3)"
