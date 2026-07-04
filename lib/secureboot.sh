@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the secureboot implementation milestone.
+hi_secureboot_module_loaded() {
+  return 0
+}

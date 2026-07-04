@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the grub implementation milestone.
+hi_grub_module_loaded() {
+  return 0
+}

@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the filesystem implementation milestone.
+hi_filesystem_module_loaded() {
+  return 0
+}

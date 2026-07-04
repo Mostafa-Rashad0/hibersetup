@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the polkit implementation milestone.
+hi_polkit_module_loaded() {
+  return 0
+}

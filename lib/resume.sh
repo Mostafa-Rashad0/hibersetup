@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the resume implementation milestone.
+hi_resume_module_loaded() {
+  return 0
+}

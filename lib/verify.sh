@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the verify implementation milestone.
+hi_verify_module_loaded() {
+  return 0
+}

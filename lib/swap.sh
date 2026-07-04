@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the swap implementation milestone.
+hi_swap_module_loaded() {
+  return 0
+}

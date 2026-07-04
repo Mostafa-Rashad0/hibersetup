@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-# Module reserved for the initramfs implementation milestone.
+hi_initramfs_module_loaded() {
+  return 0
+}
