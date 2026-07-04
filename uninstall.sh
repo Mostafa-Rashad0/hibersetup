@@ -9,6 +9,34 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/checks.sh
 . "$SCRIPT_DIR/lib/checks.sh"
 
+latest_backup_dir() {
+  if [ ! -d /var/backups/hibernate-installer ]; then
+    return 1
+  fi
+  find /var/backups/hibernate-installer -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1
+}
+
+restore_from_latest_backup() {
+  backup_dir=$(latest_backup_dir || true)
+  if [ -z "$backup_dir" ]; then
+    hi_warning "No previous Hibernate Installer backup found; removing managed settings directly"
+    return 1
+  fi
+  hi_info "Restoring configuration from $backup_dir"
+  for path in /etc/default/grub /etc/fstab /etc/initramfs-tools/conf.d/resume; do
+    src="$backup_dir$path"
+    if [ -e "$src" ]; then
+      if [ "$HI_DRY_RUN" -eq 1 ]; then
+        hi_info "DRY-RUN: restore $path from $src"
+      else
+        mkdir -p "$(dirname "$path")"
+        cp -a "$src" "$path"
+      fi
+    fi
+  done
+  return 0
+}
+
 remove_resume_params_from_grub() {
   [ -r /etc/default/grub ] || return 0
   if [ "$HI_DRY_RUN" -eq 1 ]; then
@@ -53,7 +81,9 @@ main() {
   hi_info "Hibernate Installer uninstall started"
   hi_require_root
   hi_prepare_backups
-  remove_resume_params_from_grub
+  if ! restore_from_latest_backup; then
+    remove_resume_params_from_grub
+  fi
   remove_generated_files
   if hi_command_exists update-grub; then hi_run update-grub; fi
   if hi_command_exists update-initramfs; then hi_run update-initramfs -u; fi

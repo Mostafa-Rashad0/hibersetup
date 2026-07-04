@@ -25,16 +25,23 @@ hi_detect_memory_and_swap() {
 
 hi_recommended_swap_mib() {
   ram_mib=$(( (HI_RAM_KB + 1023) / 1024 ))
-  if [ "$ram_mib" -le 8192 ]; then echo 8192
-  elif [ "$ram_mib" -le 16384 ]; then echo 20480
-  elif [ "$ram_mib" -le 32768 ]; then echo 40960
-  else echo $((ram_mib + 4096)); fi
+  if [ "$ram_mib" -le 8192 ]; then
+    echo 8192
+  elif [ "$ram_mib" -le 16384 ]; then
+    echo 20480
+  elif [ "$ram_mib" -le 32768 ]; then
+    echo 40960
+  else
+    echo $((ram_mib + 4096))
+  fi
 }
 
 hi_swap_needs_replacement() {
   recommended_kb=$(( $(hi_recommended_swap_mib) * 1024 ))
   if [ -z "$HI_ACTIVE_SWAP_PATH" ]; then return 0; fi
-  if [ "$HI_ACTIVE_SWAP_TYPE" != file ]; then hi_die "Active swap is not a swapfile. Phase 1 supports swapfile only."; fi
+  if [ "$HI_ACTIVE_SWAP_TYPE" != file ]; then
+    hi_die "Active swap is not a swapfile. Phase 1 supports swapfile only."
+  fi
   [ "$HI_ACTIVE_SWAP_SIZE_KB" -lt "$recommended_kb" ]
 }
 
@@ -56,6 +63,60 @@ hi_create_swapfile_at() {
   mkswap "$path" >/dev/null
 }
 
+hi_create_validated_swap_candidate() {
+  tmp_path=$1
+  attempt=1
+  while :; do
+    hi_create_swapfile_at "$tmp_path" "$HI_SWAP_SIZE_MIB"
+    if hi_validate_swapfile_extents "$tmp_path"; then
+      break
+    fi
+    if [ "$attempt" -ge 3 ]; then
+      hi_die "Swapfile remained fragmented after 3 attempts. Free disk space or defragment the ext4 filesystem, then retry."
+    fi
+    attempt=$((attempt + 1))
+    hi_warning "Recreating swapfile because extent validation failed (attempt $attempt of 3)"
+  done
+}
+
+hi_activate_replacement_swap() {
+  new_path=$1
+  tmp_path=$2
+  old_path=$3
+  backup_path=
+
+  if [ "$HI_DRY_RUN" -eq 1 ]; then
+    hi_info "DRY-RUN: activate replacement swap $new_path"
+    return 0
+  fi
+
+  if [ -e "$new_path" ]; then
+    backup_path="${new_path}.hibernate-installer-backup"
+    rm -f "$backup_path"
+    cp -a "$new_path" "$backup_path"
+  fi
+
+  if [ -n "$old_path" ]; then
+    if ! swapoff "$old_path"; then
+      rm -f "$tmp_path" "$backup_path"
+      hi_die "Could not disable existing swapfile $old_path; leaving current swap untouched"
+    fi
+  fi
+
+  mv "$tmp_path" "$new_path"
+  if ! swapon "$new_path"; then
+    hi_error "Failed to activate new swapfile; attempting rollback"
+    swapoff "$new_path" 2>/dev/null || true
+    if [ -n "$backup_path" ] && [ -e "$backup_path" ]; then
+      mv "$backup_path" "$new_path"
+      swapon "$new_path" || true
+    fi
+    hi_die "New swapfile activation failed; rollback attempted"
+  fi
+
+  rm -f "$backup_path"
+}
+
 hi_ensure_swap() {
   HI_SWAP_SIZE_MIB=$(hi_recommended_swap_mib)
   if ! hi_swap_needs_replacement; then
@@ -63,25 +124,8 @@ hi_ensure_swap() {
   else
     new_path=$HI_SWAP_PATH
     tmp_path="${new_path}.hibernate-installer-new"
-    attempt=1
-    while :; do
-      hi_create_swapfile_at "$tmp_path" "$HI_SWAP_SIZE_MIB"
-      if hi_validate_swapfile_extents "$tmp_path"; then
-        break
-      fi
-      if [ "$attempt" -ge 3 ]; then
-        hi_die "Swapfile remained fragmented after 3 attempts. Free disk space or defragment the ext4 filesystem, then retry."
-      fi
-      attempt=$((attempt + 1))
-      hi_warning "Recreating swapfile because extent validation failed (attempt $attempt of 3)"
-    done
-    if [ -n "$HI_ACTIVE_SWAP_PATH" ]; then
-      hi_run swapoff "$HI_ACTIVE_SWAP_PATH"
-    fi
-    if [ "$HI_DRY_RUN" -eq 0 ]; then
-      mv "$tmp_path" "$new_path"
-    fi
-    hi_run swapon "$new_path"
+    hi_create_validated_swap_candidate "$tmp_path"
+    hi_activate_replacement_swap "$new_path" "$tmp_path" "$HI_ACTIVE_SWAP_PATH"
     HI_SWAP_PATH=$new_path
     hi_success "Swapfile ready at $HI_SWAP_PATH"
   fi

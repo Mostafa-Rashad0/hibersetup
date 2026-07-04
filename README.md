@@ -67,7 +67,7 @@ The installer runs these steps in order:
 sudo ./uninstall.sh
 ```
 
-The uninstaller backs up current files, removes managed resume parameters, removes generated initramfs/systemd/polkit files, and regenerates GRUB/initramfs when available.
+The uninstaller backs up current files, restores the latest Hibernate Installer backup when available, removes managed resume parameters or generated initramfs/systemd/polkit files, and regenerates GRUB/initramfs when available.
 
 ## Logging
 
@@ -80,7 +80,7 @@ Logs are written to:
 ## Troubleshooting
 
 - If the installer reports an unsupported filesystem, do not force it. Resume offsets are filesystem-specific.
-- If `filefrag` reports multiple extents, recreate the swapfile on a less fragmented ext4 filesystem.
+- If `filefrag` reports multiple extents, the installer automatically retries swapfile creation up to three times before aborting safely.
 - If hibernation fails after installation, reboot once and check `/proc/cmdline`, `/etc/initramfs-tools/conf.d/resume`, and `/var/log/hibernate-installer.log`.
 
 ## FAQ

@@ -29,9 +29,18 @@ hi_detect_os() {
 hi_detect_boot_stack() {
   hi_info "Detecting boot mode, GRUB, and initramfs implementation"
   if [ -d /sys/firmware/efi ]; then HI_BOOT_MODE=efi; else HI_BOOT_MODE=bios; fi
-  hi_command_exists update-grub || hi_die "GRUB update command not found. Phase 1 supports GRUB only."
+  if ! hi_command_exists update-grub; then
+    if [ "$HI_DRY_RUN" -eq 1 ]; then
+      hi_warning "update-grub not found; continuing because this is a dry run"
+    else
+      hi_die "GRUB update command not found. Phase 1 supports GRUB only."
+    fi
+  fi
   if [ -d /etc/initramfs-tools ]; then
     HI_INITRAMFS=initramfs-tools
+  elif [ "$HI_DRY_RUN" -eq 1 ]; then
+    HI_INITRAMFS=initramfs-tools
+    hi_warning "/etc/initramfs-tools not found; continuing because this is a dry run"
   else
     hi_die "Unsupported initramfs implementation. Phase 1 supports initramfs-tools."
   fi
